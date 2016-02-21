@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
     uint8_t payload[164];
     uint8_t recvBuff[164];
     uint16_t *recvBuff16 = (uint16_t *)recvBuff;
-    const uint16_t nbMask = htons(0xF000);
+    const uint16_t nbMask = htons(0x0FFF);
 
     printf("\nStarting Lepton Test\n");
 
@@ -150,7 +150,7 @@ int main(int argc, char **argv) {
         // CRC-16-CCITT
         const uint16_t expected_crc16 = ntohs(recvBuff16[1]);
         // Now we reset the data to prepare for crc
-        recvBuff16[0] ^= nbMask;
+        recvBuff16[0] &= nbMask;
         recvBuff16[1] ^= recvBuff16[1];
 
         const uint16_t actual_crc16 = crc_ccitt(0, recvBuff, 164);
