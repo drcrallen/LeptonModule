@@ -103,11 +103,13 @@ main(int argc, char **argv)
 				error(recvResult, 0, "Error %d in MRAA: %s", (int)recvResult, errMsg);
 			}
 		} while(unlikely((recvBuff[0] & 0x0f) == 0x0f && isrunning));
-		const uint8_t packetNb = recv[1];
+		const uint16_t packetNb = be16toh(((uint16 *)recvBuff)[0]& 0x0FFF);
 		const uint16_t imageOffset = packetNb * 80;
 		for(int i = 0; i < 80; ++i) {
-			const recvOffset = (i<<1) + 4
-			image[imageOffset + i] = be16toh(&recvBuff[recvOffset]);
+			// Offset is half the byte offset because we use a uint16_t buffer instead of uint8_t
+			// In uint8_t bytes this is (i<<1 + 4)
+			const recvOffset = i + 2;
+			image[imageOffset + i] = be16toh(((uint16_t *)recvBuff)[recvOffset]);
 		}
 	}
 	
