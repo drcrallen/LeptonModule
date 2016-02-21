@@ -25,9 +25,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include<stdio.h>
+#include<endian.h>
 #include<signal.h>
 #include<unistd.h>
 #include<mraa.h>
+#include<error.h>
 
 void sig_handler(int signum);
 void save_pgm_file();
@@ -52,10 +54,7 @@ main(int argc, char **argv)
 	mraa_spi_bit_per_word(spi, 8);
 		
 	uint8_t payload[164];
-	uint8_t *recv = NULL;
-	int packetNb;
-	int i;
-	uint8_t checkByte = 0x0f;
+	uint8_t recvBuff[164];
 	
 	printf("\nStarting Lepton Test\n");
 	
@@ -64,31 +63,51 @@ main(int argc, char **argv)
 	usleep(200000);
 	mraa_gpio_write(cs, 0);	// low to select chip
 	
-	// loop while discard packets		
-	while((checkByte & 0x0f) == 0x0f && isrunning){
-		if(recv)
-			free(recv);
-		recv = mraa_spi_write_buf(spi, payload, 164);
-		checkByte = recv[0];
-		packetNb = recv[1];
-	}	
-		
-	// sync done, first packet is ready, store packets
-	while(packetNb < 60 && isrunning)
-	{	
-		// ignore discard packets
-		if((recv[0] & 0x0f) != 0x0f){			
-			for(i=0;i<80;i++)
-			{
-				image[packetNb * 80 + i] = (recv[2*i+4] << 8 | recv[2*i+5]);
-			}			
+	// loop while discard packets
+	for(int packetNb = 0; isrunning && packetNb < 60; ++packetNb) {
+		do {
+			mraa_result_t recvResult;
+			if(unlikely((recvResult = mraa_spi_transfer_buf(spi, payload, recvBuff, 164)) != MRAA_SUCCESS)) {
+				char *errMsg = NULL;
+				switch(recvResult) {
+					case MRAA_ERROR_FEATURE_NOT_IMPLEMENTED:
+						errMsg = "MRAA_ERROR_FEATURE_NOT_IMPLEMENTED";
+					case MRAA_ERROR_FEATURE_NOT_SUPPORTED:
+						errMsg = "MRAA_ERROR_FEATURE_NOT_SUPPORTED";
+					case MRAA_ERROR_INVALID_VERBOSITY_LEVEL:
+						errMsg = "MRAA_ERROR_INVALID_VERBOSITY_LEVEL";
+					case MRAA_ERROR_INVALID_PARAMETER:
+						errMsg = "MRAA_ERROR_INVALID_PARAMETER";
+					case MRAA_ERROR_INVALID_HANDLE:
+						errMsg = "MRAA_ERROR_INVALID_HANDLE";
+					case MRAA_ERROR_NO_RESOURCES:
+						errMsg = "MRAA_ERROR_NO_RESOURCES";
+					case MRAA_ERROR_INVALID_RESOURCE:
+						errMsg = "MRAA_ERROR_INVALID_RESOURCE";
+					case MRAA_ERROR_INVALID_QUEUE_TYPE:
+						errMsg = "MRAA_ERROR_INVALID_QUEUE_TYPE";
+					case MRAA_ERROR_NO_DATA_AVAILABLE:
+						errMsg = "MRAA_ERROR_NO_DATA_AVAILABLE";
+					case MRAA_ERROR_INVALID_PLATFORM:
+						errMsg = "MRAA_ERROR_INVALID_PLATFORM";
+					case MRAA_ERROR_PLATFORM_NOT_INITIALISED:
+						errMsg = "MRAA_ERROR_PLATFORM_NOT_INITIALISED";
+					case MRAA_ERROR_PLATFORM_ALREADY_INITIALISED:
+						errMsg = "MRAA_ERROR_PLATFORM_ALREADY_INITIALISED";
+					case MRAA_ERROR_UNSPECIFIED:
+						errMsg = "MRAA_ERROR_UNSPECIFIED";
+					default:
+						errMsg = "Completely unknown error in MRAA"
+				}
+				error(recvResult, 0, "Error %d in MRAA: %s", (int)recvResult, errMsg);
+			}
+		} while(unlikely((recvBuff[0] & 0x0f) == 0x0f && isrunning));
+		const uint8_t packetNb = recv[1];
+		const uint16_t imageOffset = packetNb * 80;
+		for(int i = 0; i < 80; ++i) {
+			const recvOffset = (i<<1) + 4
+			image[imageOffset + i] = be16toh(&recvBuff[recvOffset]);
 		}
-		
-		// read next packet
-		if(recv)
-			free(recv);
-		recv = mraa_spi_write_buf(spi, payload, 164);
-		packetNb = recv[1];
 	}
 	
 	printf("\nFrame received, storing PGM file\n");
