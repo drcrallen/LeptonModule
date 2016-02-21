@@ -60,7 +60,8 @@ main(int argc, char **argv)
 	
 	//sync	
 	mraa_gpio_write(cs, 1);	// high to de-select chip
-	usleep(200000);
+	// should be at least 5 frames at 27Hz for 185185us
+	usleep(185190);
 	mraa_gpio_write(cs, 0);	// low to select chip
 	
 	// loop while discard packets
