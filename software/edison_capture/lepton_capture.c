@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include<mraa.h>
 #include<error.h>
 #include<sys/time.h>
+#include<linux/crc-ccitt.h>
 
 void sig_handler(int signum);
 void save_pgm_file();
@@ -57,6 +58,7 @@ main(int argc, char **argv)
 	uint8_t payload[164];
 	uint8_t recvBuff[164];
 	uint16_t recvBuff16 = (uint16_t *)recvBuff;
+	const uint16_t nbMask = htobe16(0xF000);
 	
 	printf("\nStarting Lepton Test\n");
 	
@@ -105,9 +107,19 @@ main(int argc, char **argv)
 				error(recvResult, 0, "Error %d in MRAA: %s", (int)recvResult, errMsg);
 			}
 		} while(unlikely((recvBuff[0] & 0x0f) == 0x0f && isrunning));
-		const uint16_t packetNb = be16toh(recvBuff16[0]& 0x0FFF);
+		const uint16_t packetNb = be16toh(recvBuff16[0]) & 0x0FFF;
 		// CRC-16-CCITT
-		const uint16_t crc16 = be16toh(recvBuff16[1]);
+		const uint16_t expected_crc16 = be16toh(recvBuff16[1]);
+		// Now we reset the data to prepare for crc
+		recvBuff16[0] ^= nbMask;
+		recvBuff16[1] ^= recvBuff16[1];
+		
+		const uint16_t actual_crc16 = crc_ccitt(0, recvBuff, 164);
+		
+		if(unlikely(expected_crc16 != actual_crc16)) {
+			error(1, 0, "CRC missmatch, expected %d found %d", (int)expected_crc16, (int)actual_crc16);
+		}
+		
 		const uint16_t imageOffset = packetNb * 80;
 		for(int i = 0; i < 80; ++i) {
 			// Offset is half the byte offset because we use a uint16_t buffer instead of uint8_t
