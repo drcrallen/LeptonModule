@@ -66,8 +66,8 @@ main(int argc, char **argv)
 	// loop while discard packets
 	for(int packetNb = 0; isrunning && packetNb < 60; ++packetNb) {
 		do {
-			mraa_result_t recvResult;
-			if(unlikely((recvResult = mraa_spi_transfer_buf(spi, payload, recvBuff, 164)) != MRAA_SUCCESS)) {
+			const mraa_result_t recvResult =  mraa_spi_transfer_buf(spi, payload, recvBuff, 164);
+			if(unlikely(recvResult != MRAA_SUCCESS)) {
 				char *errMsg = NULL;
 				switch(recvResult) {
 					case MRAA_ERROR_FEATURE_NOT_IMPLEMENTED:
@@ -110,13 +110,13 @@ main(int argc, char **argv)
 		}
 	}
 	
-	printf("\nFrame received, storing PGM file\n");
-	save_pgm_file();
-	
 	// de-init	
 	fprintf(stdout, "\nEnding, set CS = 0\n");
 	mraa_gpio_write(cs, 0);	
 	mraa_gpio_close(cs);
+	
+	printf("\nFrame received, storing PGM file\n");
+	save_pgm_file();
 	
 	fprintf(stdout, "\nDone\n");
 	
