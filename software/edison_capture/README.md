@@ -4,7 +4,7 @@ Captures a still image from the lepton on the Intel Edison, using pins 10 - 13 f
 Make sure, the MRAA library is up to date.
 
 Compile with:
-gcc -lmraa -o lepton_capture lepton_capture.c
+`gcc -O2 --std=c99 -lmraa -o lepton_capture lepton_capture.c`
 
 Run with:
 ./lepton_capture
