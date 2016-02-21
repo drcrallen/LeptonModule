@@ -163,8 +163,7 @@ int main(int argc, char **argv) {
         for(int i = 0; i < 80; ++i) {
             // Offset is half the byte offset because we use a uint16_t buffer instead of uint8_t
             // In uint8_t bytes this is (i<<1 + 4)
-            const int recvOffset = i + 2;
-            image[imageOffset + i] = ntohs(recvBuff16[recvOffset]);
+            image[imageOffset + i] = ntohs(recvBuff16[i + 2]);
         }
     }
 
