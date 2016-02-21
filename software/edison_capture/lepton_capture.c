@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include<unistd.h>
 #include<mraa.h>
 #include<error.h>
+#include<sys/time.h>
 
 void sig_handler(int signum);
 void save_pgm_file();
@@ -55,6 +56,7 @@ main(int argc, char **argv)
 		
 	uint8_t payload[164];
 	uint8_t recvBuff[164];
+	uint16_t recvBuff16 = (uint16_t *)recvBuff;
 	
 	printf("\nStarting Lepton Test\n");
 	
@@ -103,13 +105,15 @@ main(int argc, char **argv)
 				error(recvResult, 0, "Error %d in MRAA: %s", (int)recvResult, errMsg);
 			}
 		} while(unlikely((recvBuff[0] & 0x0f) == 0x0f && isrunning));
-		const uint16_t packetNb = be16toh(((uint16 *)recvBuff)[0]& 0x0FFF);
+		const uint16_t packetNb = be16toh(recvBuff16[0]& 0x0FFF);
+		// CRC-16-CCITT
+		const uint16_t crc16 = be16toh(recvBuff16[1]);
 		const uint16_t imageOffset = packetNb * 80;
 		for(int i = 0; i < 80; ++i) {
 			// Offset is half the byte offset because we use a uint16_t buffer instead of uint8_t
 			// In uint8_t bytes this is (i<<1 + 4)
 			const recvOffset = i + 2;
-			image[imageOffset + i] = be16toh(((uint16_t *)recvBuff)[recvOffset]);
+			image[imageOffset + i] = be16toh(recvBuff16[recvOffset]);
 		}
 	}
 	
