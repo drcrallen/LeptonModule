@@ -72,7 +72,7 @@ static uint16_t const crc_ccit_table[] = {
     0x7bc7, 0x6a4e, 0x58d5, 0x495c, 0x3de3, 0x2c6a, 0x1ef1, 0x0f78
 };
 
-static inline uint16_t crc_ccitt(uint16_t crc, uint8_t const *buffer, size_t len) {
+static inline uint16_t crc_ccitt(uint16_t crc, uint8_t const *buffer, const size_t len) {
     for(size_t i = 0; i < len; ++i) {
         crc = (crc >> 8) ^ crc_ccit_table[(crc ^ buffer[i]) & 0xFF];
     }
