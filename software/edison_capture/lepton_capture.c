@@ -64,7 +64,7 @@ main(int argc, char **argv)
 	mraa_gpio_write(cs, 0);	// low to select chip
 	
 	// loop while discard packets
-	for(int packetNb = 0; isrunning && packetNb < 60; ++packetNb) {
+	for(int good_packet_count = 0; isrunning && good_packet_count < 60; ++good_packet_count) {
 		do {
 			const mraa_result_t recvResult =  mraa_spi_transfer_buf(spi, payload, recvBuff, 164);
 			if(unlikely(recvResult != MRAA_SUCCESS)) {
